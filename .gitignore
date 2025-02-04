@@ -1,0 +1,10 @@
+/x64
+x64/
+
+vcpkg_installed/
+/vcpkg_installed
+
+/.vs
+.vs/
+
+vcpkg.json

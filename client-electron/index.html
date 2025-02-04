@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket Chat & WebRTC Video Call</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .form-group { margin-bottom: 15px; }
+        input, button { padding: 8px; margin: 5px 0; }
+        #messages { 
+            border: 1px solid #ccc; 
+            padding: 10px; 
+            height: 300px; 
+            overflow-y: auto; 
+            display: flex; 
+            flex-direction: column;
+        }
+        .message { 
+            padding: 8px; 
+            margin: 5px; 
+            border-radius: 5px; 
+            max-width: 70%;
+        }
+        .sent { 
+            align-self: flex-end; 
+            background-color: #d1e7dd; 
+            text-align: right;
+        }
+        .received { 
+            align-self: flex-start; 
+            background-color: #e7e7e7; 
+            text-align: left;
+        }
+        .error { 
+            color: red; 
+            font-weight: bold;
+        }
+        #video-container { 
+            display: flex; 
+            justify-content: space-around; 
+            margin-top: 20px; 
+        }
+        video { width: 40%; border: 2px solid #ccc; }
+    </style>
+</head>
+<body>
+    <title>WebSocket Chat</title>
+</head>
+<body>
+    <h2>Register</h2>
+    <input type="text" id="regUsername" placeholder="Username">
+    <input type="password" id="regPassword" placeholder="Password">
+    <button onclick="registerUser()">Register</button>
+
+    <h2>Login</h2>
+    <input type="text" id="loginUsername" placeholder="Username">
+    <input type="password" id="loginPassword" placeholder="Password">
+    <button onclick="loginUser()">Login</button>
+
+    <h2>Chat</h2>
+    <div id="messages" style="border: 1px solid black; height: 300px; overflow-y: auto;"></div>
+    <input type="text" id="message" placeholder="Type a message">
+    <button onclick="sendMessage()">Send</button>
+
+    </div>
+
+
+
+     <script>
+
+        const socket = new WebSocket("ws://localhost:8080"); // Replace with your actual WebSocket server URL
+
+let authToken = null;
+let username = null;
+
+socket.onopen = () => {
+    console.log("Connected to WebSocket server.");
+};
+
+socket.onmessage = (event) => {
+    try {
+        const data = JSON.parse(event.data);
+        console.log("Received data:", data);
+
+        if (data.status === "error") {
+            appendMessage(`Error: ${data.error_type || data.message}`, "red", "left");
+            return;
+        }
+
+        if (data.responsefrom === "register") {
+            appendMessage(data.status === "success" ? "Registration successful!" : "Registration failed!", "blue", "left");
+        } 
+        
+        else if (data.responsefrom === "login") {
+            if (data.status === "success") {
+                authToken = data.token;
+                appendMessage("Login successful!", "green", "left");
+            } 
+            else {
+                appendMessage("Login failed: " + data.message, "red", "left");
+            }
+
+        } 
+        
+        else if (data.responsefrom === "message") {
+            if (data.userMessage.startsWith("You (Me):")) {
+                const cleanMessage = data.userMessage.substring(9);
+                appendMessage(cleanMessage, "blue", "right");
+            } else {
+                appendMessage(data.userMessage, "black", "left");
+            }
+        }
+    } catch (err) {
+        console.error("Error processing message:", err);
+    }
+};
+
+// Function to send data
+function sendData(type, payload) {
+    if (socket.readyState !== WebSocket.OPEN) {
+        appendMessage("WebSocket is not connected!", "red", "left");
+        return;
+    }
+    socket.send(JSON.stringify({ type, ...payload }));
+}
+
+// Register new user
+function registerUser() {
+    const regUser = document.getElementById('regUsername').value;
+    const regPass = document.getElementById('regPassword').value;
+    if (!regUser || !regPass) {
+        appendMessage("Please enter username and password!", "red", "left");
+        return;
+    }
+    sendData("register", { username: regUser, password: regPass });
+}
+
+// Login existing user
+function loginUser() {
+    username = document.getElementById('loginUsername').value;
+    const loginPass = document.getElementById('loginPassword').value;
+    if (!username || !loginPass) {
+        appendMessage("Please enter username and password!", "red", "left");
+        return;
+    }
+    sendData("login", { username, password: loginPass });
+}
+
+// Send chat message
+function sendMessage() {
+    const message = document.getElementById('message').value;
+    if (!authToken) {
+        appendMessage("You must log in first!", "red", "left");
+        return;
+    }
+    if (!message) {
+        appendMessage("Message cannot be empty!", "red", "left");
+        return;
+    }
+    sendData("message", { username, token: authToken, content: message });
+}
+
+// Append messages to the UI
+function appendMessage(message, color = "black", position = "left") {
+    const msgContainer = document.createElement("div");
+    msgContainer.style.color = color;
+    msgContainer.style.textAlign = position === "right" ? "right" : "left";
+    msgContainer.style.margin = "5px 0";
+    
+    const msgText = document.createElement("p");
+    msgText.textContent = message;
+    msgContainer.appendChild(msgText);
+    
+    document.getElementById("messages").appendChild(msgContainer);
+}
+
+    </script>
+
+    </body>
+
+
+   
+</html>

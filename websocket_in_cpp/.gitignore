@@ -1,0 +1,9 @@
+x64/
+
+websocket_in_cpp.vcxproj.user
+websocket_in_cpp.vcxproj.filters
+websocket_in_cpp.vcxproj
+
+users.db
+users.db-shm
+users.db-wal
